@@ -2,25 +2,42 @@ import sys
 import asyncio
 from rpcudp.protocol import RPCProtocol
 
+loop = asyncio.get_event_loop()
+
 @asyncio.coroutine
 def lock(protocol, address, locks):
     result = yield from protocol.lock(address, locks)
-    print(result[1] if result[0] else "No response received.")
+    if not result[0]:
+        print("No response received")
 
 @asyncio.coroutine
 def release(protocol, address, locks):
     result = yield from protocol.release(address, locks)
-    print(result[1] if result[0] else "No response received.")
-    
+    if not result[0]:
+        print("No response received")
+
 class RPCServer(RPCProtocol):
     def rpc_go(self, sender):
-        print('go')
+        loop.stop()
         return "ok"
+
+def lock_wrapper(locks):
+    _lock = lock(protocol, (server_name, server_port), locks)
+    try:
+        loop.run_until_complete(_lock)
+    finally:
+        loop.run_forever()
+
+def release_wrapper(locks):
+    _release = release(protocol, (server_name, server_port), locks)
+    try:
+        loop.run_until_complete(_release)
+    finally:
+        loop.stop()
 
 if len(sys.argv) < 4:
     print("Usage: server.py server_name server_port client_port")
 else:
-    loop = asyncio.get_event_loop()
     server_name = sys.argv[1]
     server_port = int(sys.argv[2])
     client_port = int(sys.argv[3])
@@ -29,10 +46,14 @@ else:
     listen = loop.create_datagram_endpoint(RPCServer, local_addr=('127.0.0.1', client_port))
     transport, protocol = loop.run_until_complete(listen)
 
-    _lock = lock(protocol, (server_name, server_port), 3)
-    _release = release(protocol, (server_name, server_port), 7)
-    try:
-        loop.run_until_complete(_release)
-        loop.run_until_complete(_lock)
-    finally:
-        loop.run_forever()
+    operation = input("What operation to perform? (lock/release)\n")
+    if operation == "lock" or operation == "release":
+        locks = int(input("How many locks?\n"))
+        if operation == "lock":
+            lock_wrapper(locks)
+        elif operation == "release":
+            release_wrapper(locks)
+        print("Complete.")
+    else:
+        print("Bad operation.")
+
