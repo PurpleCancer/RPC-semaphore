@@ -6,15 +6,21 @@ loop = asyncio.get_event_loop()
 
 @asyncio.coroutine
 def lock(protocol, address, locks):
-    result = yield from protocol.lock(address, locks)
-    if not result[0]:
-        print("No response received")
+    success = False
+    while not success:
+        result = yield from protocol.lock(address, locks)
+        success = result[0]
+        if not result[0]:
+            print("No response received, retrying")
 
 @asyncio.coroutine
 def release(protocol, address, locks):
-    result = yield from protocol.release(address, locks)
-    if not result[0]:
-        print("No response received")
+    success = False
+    while not success:
+        result = yield from protocol.release(address, locks)
+        success = result[0]
+        if not result[0]:
+            print("No response received, retrying")
 
 class RPCServer(RPCProtocol):
     def rpc_go(self, sender):

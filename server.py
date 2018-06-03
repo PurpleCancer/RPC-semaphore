@@ -9,9 +9,12 @@ protocol = 0
 
 @asyncio.coroutine
 def reply(client):
-    result = yield from protocol.go(client)
-    if not result[0]:
-        print("No response received")
+    success = False
+    while not success:
+        result = yield from protocol.go(client)
+        success = result[0]
+        if not result[0]:
+            print("No response received, retrying")
 
 @asyncio.coroutine
 def check_and_reply():
